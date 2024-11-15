@@ -2,12 +2,13 @@ grammar python;
 
 start: line* EOF;
 
-ifStatement: 'if' expression+ ':''\t'?tws'\t' line+ elif*  else?;
+ifStatement: 'if' expression+ ':''\t'?tws'\t' nifline+ elif*  else?;
 
-elif: ('elif' expression+ ':'(tws'\t'line)+);
+elif: ('elif' expression+ ':'(tws'\t'nifline)+);
 
-else: ('else:'(tws'\t'line)+);
+else: ('else:'(tws'\t'nifline)+);
 
+nifline: (term assignment expression tws?);
 line: (term assignment expression tws?) | ifStatement;
 
 assignment: operator?'=';
