@@ -13,7 +13,7 @@ line: (term assignment expression tws?) | ifStatement;
 assignment: operator?'=';
 
 expression: (('(' expression ')') | exp);
-exp: (value ( (operator|conditionals|and|or) (term|value|expression))?);
+exp: (value ( (operatorHP|conditionals|and|or) (term|value|expression))?( (operatorLP) (term|value|expression))?);
 
 
 value: ('('val')') | val;
@@ -22,7 +22,9 @@ val: not? (term | number | string | bool | array);
 tws:  ('\n')+;
 array: '[' ((value',')*? value)']';
 string: ('"' ~'"'*? '"') | ('\'' ~'\''*? '\'');
-operator: '+' | '-' | '/' | '%' | '*';
+operator: operatorHP | operatorLP;
+operatorHP: '/' | '%' | '*';
+operatorLP: '+' | '-';
 conditionals: '<' | '<=' | '==' | '>=' | '>' | '!=';
 
 term : TERM;
