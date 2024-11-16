@@ -9,13 +9,28 @@ elif: ('elif' expression+ ':'(tws'\t'nifline)+);
 else: ('else:'(tws'\t'nifline)+);
 
 nifline: (term assignment expression tws?);
+
 line: (term assignment expression tws?) | ifStatement;
 
 assignment: operator?'=';
 
-expression: (('(' expression ')') | exp);
-exp: (value ( (operatorHP|conditionals|and|or) (term|value|expression))?( (operatorLP) (term|value|expression))?);
+expression: (('(' expression ')') | ex);
 
+ex: expHP exp;
+
+exp: (operatorLP expHP exp) 
+    | (conditionals expHP exp) 
+    | (and expHP exp) 
+    | (or expHP exp) 
+    | ;
+
+expHP: ('('expression')' | term | value) expHPP;
+
+expHPP: (operatorHP ('('expression')' | term | value) expHPP) | ;
+
+
+//exp: ((expression ( ('+'|'-'|conditionals|and|or) (term|value))?) | expHP)*;
+//expHP: (value ( (operatorHP|conditionals|and|or) (term|value))?);
 
 value: ('('val')') | val;
 val: not? (term | number | string | bool | array);
@@ -23,7 +38,7 @@ val: not? (term | number | string | bool | array);
 tws:  ('\n')+;
 array: '[' ((value',')*? value)']';
 string: ('"' ~'"'*? '"') | ('\'' ~'\''*? '\'');
-operator: operatorHP | operatorLP;
+operator: operatorLP | operatorHP;
 operatorHP: '/' | '%' | '*';
 operatorLP: '+' | '-';
 conditionals: '<' | '<=' | '==' | '>=' | '>' | '!=';
