@@ -14,23 +14,7 @@ line: (term assignment expression tws?) | ifStatement;
 
 assignment: operator?'=';
 
-expression: (('(' expression ')') | ex);
-
-ex: expHP exp;
-
-exp: (operatorLP expHP exp) 
-    | (conditionals expHP exp) 
-    | (and expHP exp) 
-    | (or expHP exp) 
-    | ;
-
-expHP: ('('expression')' | term | value) expHPP;
-
-expHPP: (operatorHP ('('expression')' | term | value) expHPP) | ;
-
-
-//exp: ((expression ( ('+'|'-'|conditionals|and|or) (term|value))?) | expHP)*;
-//expHP: (value ( (operatorHP|conditionals|and|or) (term|value))?);
+expression: expression operator expression | expression conditionals expression | '('expression')' | (val|term);
 
 value: ('('val')') | val;
 val: not? (term | number | string | bool | array);
@@ -41,7 +25,7 @@ string: ('"' ~'"'*? '"') | ('\'' ~'\''*? '\'');
 operator: operatorLP | operatorHP;
 operatorHP: '/' | '%' | '*';
 operatorLP: '+' | '-';
-conditionals: '<' | '<=' | '==' | '>=' | '>' | '!=';
+conditionals: '<' | '<=' | '==' | '>=' | '>' | '!=' | and | or | not;
 
 term : TERM;
 and: 'and';
