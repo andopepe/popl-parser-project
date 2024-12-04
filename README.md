@@ -17,9 +17,9 @@
   2. Zac Vega
      
 * Requirements
-      * Programming Language: Python 3.12
-      * ANTLR version : 4
-      * Both Linux and Windows envirnments have been tested for this project
+   - Programming Language: Python 3.12
+   - ANTLR version : 4
+   - Both Linux and Windows envirnments have been tested for this project
 
 * How to use/run
       1. Pull the latest version the of the project for this Github repositiory
@@ -27,7 +27,7 @@
          - gui can be used to see graphical representations of each code segment
 
 * Video Link
-      * The video link is available on the canvas site.
+   - The video link is available on the canvas site.
 
 * Deliverable 1 commit hash
   40253ad095edbc045b0ac5c4c67507d7a7ea4954
