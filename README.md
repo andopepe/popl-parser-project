@@ -3,13 +3,13 @@
 # Project Description
 * This project was to write a grammer for a basic version of Python. The grammer was created with ANTLR
 * The grammer supported the following:
-*   - Arithmetic operators (+, -, *, /, %,)
-*   - Assignment operators (=, +=, -=, *=, /=)
-*   - if/elif/else blocks
-*   - Conditional statements (<, <=, >, >=, ==, !=,and, or, not)
-*   - while and for Loops
-*   - Nested structures
-*   - Support for comments
+   - Arithmetic operators (+, -, *, /, %,)
+   - Assignment operators (=, +=, -=, *=, /=)
+   - if/elif/else blocks
+   - Conditional statements (<, <=, >, >=, ==, !=,and, or, not)
+   - while and for Loops
+   - Nested structures
+   - Support for comments
       
 * Team Name: POPL Poppers
 * Team Members
@@ -17,17 +17,17 @@
   2. Zac Vega
      
 * Requirements
-* Programming Language: Python 3.12
-* ANTLR version : 4
-* Both Linux and Windows envirnments have been tested for this project
+      * Programming Language: Python 3.12
+      * ANTLR version : 4
+      * Both Linux and Windows envirnments have been tested for this project
 
 * How to use/run
-* 1. Pull the latest version the of the project for this Github repositiory
-* 2. Run the command antlr4-parse python.g4 start project_deliverable_3.py
-*       - gui can be used to see graphical representations of each code segment
+      1. Pull the latest version the of the project for this Github repositiory
+      2. Run the command antlr4-parse python.g4 start project_deliverable_3.py
+         - gui can be used to see graphical representations of each code segment
 
 * Video Link
-* The video link is available on the canvas site.
+      * The video link is available on the canvas site.
 
 * Deliverable 1 commit hash
   40253ad095edbc045b0ac5c4c67507d7a7ea4954
