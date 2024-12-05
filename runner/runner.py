@@ -2,7 +2,7 @@ from antlr4 import *
 from pythonLexer import pythonLexer
 from pythonParser import pythonParser
 
-with open('retry/project_deliverable_3.py', 'r') as file:
+with open('popl-parser-project/project_deliverable_3.py', 'r') as file:
 # with open('retry/tmp.py', 'r') as file:
     content = file.read()
     # print(content)
