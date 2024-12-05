@@ -1,4 +1,2 @@
-*.java
-*.tokens
-*.interp
 antlrOutput/
+.antlr

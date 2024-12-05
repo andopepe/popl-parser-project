@@ -1,127 +1,212 @@
 grammar python;
 
-tokens { INDENT, DEDENT }
 
+@lexer::header{
+from antlr_denter.DenterHelper import DenterHelper
+from pythonParser import pythonParser
+from antlr4.Token import CommonToken
+from antlr4.Token import Token
+from pythonParser import pythonParser
+}
 @lexer::members {
+class DenterHelper(object):
+    def __init__(self, nl_token, indent_token, dedent_token, should_ignore_eof):
+        self.dents_buffer = []
+        self.indentations = []
+        self.nl_token = nl_token
+        self.indent_token = indent_token
+        self.dedent_token = dedent_token
+        self.reached_eof = False
+        self.should_ignore_eof = should_ignore_eof
 
-	// Initializing `pendingDent` to true means any whitespace at the beginning
-	// of the file will trigger an INDENT, which will probably be a syntax error,
-	// as it is in Python.
-	private boolean pendingDent = true;
+    def next_token(self):
+        self.init_if_first_run()
+        if not self.dents_buffer:
+            t = self.pull_token()
+        else:
+            t = self.dents_buffer.pop(0)
+        if self.reached_eof:
+            return t
+        if t.type == self.nl_token:
+            r = self.handle_newline_token(t)
+        elif t.type == Token.EOF:
+            r = self.apply(t)
+        else:
+            r = t
+        return r
+    
+    def pull_token(self):
+            """
 
-	private int indentCount = 0;
+            :rtype: CommonToken
+            """
+            pass
 
-	private java.util.LinkedList<Token> tokenQueue = new java.util.LinkedList<>();
+    def init_if_first_run(self):
+        if not self.indentations:
+            self.indentations.insert(0, 0)
+            while True:
+                first_real_token = self.pull_token()
+                if first_real_token.type != self.nl_token:
+                    break
+            if first_real_token.column > 0:
+                self.indentations.insert(0, first_real_token.column)
+                self.dents_buffer.append(self.create_token(self.indent_token, first_real_token))
+            self.dents_buffer.append(first_real_token)
 
-	private java.util.Stack<Integer> indentStack = new java.util.Stack<>();
+    def handle_newline_token(self, t: Token):
+        next_next = self.pull_token()
+        while next_next.type == self.nl_token:
+            t = next_next
+            next_next = self.pull_token()
+        if next_next.type == Token.EOF:
+            return self.apply(next_next)
+        nl_text = t.text
+        indent = len(nl_text) - 1
+        if indent > 0 and nl_text[0] == '\r':
+            indent -= 1
+        prev_indent = self.indentations[0]
+        if indent == prev_indent:
+            r = t
+        elif indent > prev_indent:
+            r = self.create_token(self.indent_token, t)
+            self.indentations.insert(0, indent)
+        else:
+            r = self.unwind_to(indent, t)
+        self.dents_buffer.append(next_next)
+        return r
 
-	private Token initialIndentToken = null;
+    def create_token(self, token_type, copy_from: CommonToken):
+        if token_type == self.nl_token:
+            token_type_str = 'newLine'
+        elif token_type == self.indent_token:
+            token_type_str = 'indent'
+        elif token_type == self.dedent_token:
+            token_type_str = 'dedent'
+        else:
+            token_type_str = None
+        r = self.get_injected_token(copy_from, token_type_str)
+        r.type = token_type
+        return r
+    
+    def get_injected_token(self, copy_from: CommonToken, token_type_str):
+        new_token = copy_from.clone()
+        new_token.text = token_type_str
+        return new_token
 
-	private int getSavedIndent() { return indentStack.isEmpty() ? 0 : indentStack.peek(); }
+    def unwind_to(self, target_indent, copy_from : CommonToken):
+        self.dents_buffer.append(self.create_token(self.nl_token, copy_from))
+        while True:
+            prev_indent = self.indentations.pop(0)
+            if prev_indent == target_indent:
+                break
+            if target_indent > prev_indent:
+                self.indentations.insert(0, prev_indent)
+                self.dents_buffer.append(self.create_token(self.indent_token, copy_from))
+                break
+            self.dents_buffer.append(self.create_token(self.dedent_token, copy_from))
+        self.indentations.insert(0, target_indent)
+        return self.dents_buffer.pop(0)
 
-	private CommonToken createToken(int type, String text, Token next) {
-		CommonToken token = new CommonToken(type, text);
-		if (null != initialIndentToken) {
-			token.setStartIndex(initialIndentToken.getStartIndex());
-			token.setLine(initialIndentToken.getLine());
-			token.setCharPositionInLine(initialIndentToken.getCharPositionInLine());
-			token.setStopIndex(next.getStartIndex()-1);
-		}
-		return token;
-	}
+    def apply(self, t: CommonToken):
+        if self.should_ignore_eof:
+            self.reached_eof = True
+            return t
+        else:
+            if not self.indentations:
+                r = self.create_token(self.nl_token, t)
+                self.dents_buffer.append(t)
+            else:
+                r = self.unwind_to(0, t)
+                self.dents_buffer.append(t)
+            self.reached_eof = True
+            return r
 
-	@Override
-	public Token nextToken() {
+class MyCoolDenter(DenterHelper):
+    def __init__(self, lexer, nl_token, indent_token, dedent_token, ignore_eof):
+        super().__init__(nl_token, indent_token, dedent_token, ignore_eof)
+        self.lexer: pythonLexer = lexer
 
-		// Return tokens from the queue if it is not empty.
-		if (!tokenQueue.isEmpty()) { return tokenQueue.poll(); }
+    def pull_token(self):
+        return super(pythonLexer, self.lexer).nextToken()
 
-		// Grab the next token and if nothing special is needed, simply return it.
-		Token next = super.nextToken();
-		//NOTE: This could be an appropriate spot to count whitespace or deal with
-		//NEWLINES, but it is already handled with custom actions down in the
-		//lexer rules.
-		if (pendingDent && null == initialIndentToken && NEWLINE != next.getType()) { initialIndentToken = next; }
-		if (null == next || HIDDEN == next.getChannel() || NEWLINE == next.getType()) { return next; }
+denter = None
 
-		// Handle EOF. In particular, handle an abrupt EOF that comes without an
-		// immediately preceding NEWLINE.
-		if (next.getType() == EOF) {
-			indentCount = 0;
-			// EOF outside of `pendingDent` state means input did not have a final
-			// NEWLINE before end of file.
-			if (!pendingDent) {
-				initialIndentToken = next;
-				tokenQueue.offer(createToken(NEWLINE, "NEWLINE", next));
-			}
-		}
-
-		// Before exiting `pendingDent` state queue up proper INDENTS and DEDENTS.
-		while (indentCount != getSavedIndent()) {
-			if (indentCount > getSavedIndent()) {
-				indentStack.push(indentCount);
-				tokenQueue.offer(createToken(python.INDENT, "INDENT" + indentCount, next));
-			} else {
-				indentStack.pop();
-				tokenQueue.offer(createToken(python.DEDENT, "DEDENT"+getSavedIndent(), next));
-			}
-		}
-		pendingDent = false;
-		tokenQueue.offer(next);
-		return tokenQueue.poll();
-	}
+def nextToken(self):
+    if not self.denter:
+        self.denter = self.MyCoolDenter(self, self.NL, pythonParser.INDENT, pythonParser.DEDENT, False)
+    return self.denter.next_token()
 
 }
 
-start : ( NEWLINE | line )* EOF ;
+NL: ('\r'? '\n' '\t'*);
 
-line: (term assignment expression NEWLINE?) | ifStatement |	for  | while;
+
+start: (NL | line)*;
+
+line: (term assignment expression NL?) | ifStatement | for | while;
 
 assignment: operator?'=';
 
 expression: expression operator expression | expression conditionals expression | '('expression')' | val;
 
-ifStatement: 'if' expression+ ':' (NEWLINE WS line )+ (NEWLINE WS)* ('elif' expression+ ':'  (NEWLINE WS line)+ )* (NEWLINE WS)* ('else:'  (NEWLINE WS line)+ )?;
+// ifStatement: IF expression+ ':' (NL INDENT line)+ (ELIF expression+ ':'  (NL INDENT line)+ )* (ELSE':'  (NL INDENT line)+ )?;
 
-while: 'while' expression+ ':' NEWLINE  (WS line)+ ;
+// ifStatement: IF expression+ ':' NL INDENT line+ DEDENT;
 
-for: 'for' expression 'in' expression ':'  (NEWLINE WS line)+ ;
+ifStatement: if elif* else?;
+if: IF expression+ ':' INDENT line+ DEDENT;
+elif: ELIF expression+ ':'  INDENT line+ DEDENT;
+else: ELSE ':'  INDENT line+ DEDENT;
+
+while: WHILE expression+ ':' INDENT line+ DEDENT;
+
+for: FOR expression 'in' expression ':' INDENT line+ DEDENT;
 
 value: ('('val')') | val;
-val: not? (term | number | STRING | bool | array | function);
+val: NOT? (term | number | STRING | bool | array | function);
 
 array: '[' ((value',')*? value)']';
 operator: operatorLP | operatorHP;
 operatorHP: '/' | '%' | '*';
 operatorLP: '+' | '-';
-conditionals: '<' | '<=' | '==' | '>=' | '>' | '!=' | and | or | not;
+conditionals: '<' | '<=' | '==' | '>=' | '>' | '!=' | AND | OR | NOT;
 function: term'('value(','value)+')';
 
-term : TERM;
-and: 'and';
-or: 'or';
-not: 'not';
- 
-bool: 'True' | 'False';
-number : FLOAT | DIGIT;
+AND: 'and';
+OR: 'or';
+NOT: 'not';
+
+IF: 'if'; 
+
+ELSE: 'else';
+
+ELIF: 'elif';
+
+FOR: 'for';
+
+WHILE: 'while';
+
+
+bool: TRUE | FALSE;
+TRUE: 'True';
+FALSE: 'False';
+
+number : FLOAT | DIGIT+;
 STRING: ('"' ~'"'*? '"') | ('\'' ~'\''*? '\'');
-TERM: [a-zA-Z] [a-zA-Z0-9_\-]*;
+
+term: TERM;
+TERM: TERM_START TERM_FOLLOW*;
+fragment TERM_START: [a-zA-Z]; 
+fragment TERM_FOLLOW: [a-zA-Z0-9_\-]+;
+
 FLOAT: '-'?[0-9]+ '.' [0-9]+;
-DIGIT: '-'?[0-9]+;
-NTWS: ' ' -> skip;
+DIGIT: '-'?[0-9];
+WS: [ ] ->skip; 
 
-NEWLINE : ( '\r'? '\n' | '\r' ) {
-    if (pendingDent) { setChannel(HIDDEN); }
-    pendingDent = true;
-    indentCount = 0;
-    initialIndentToken = null;
-};
+BLOCKCOMMENT : '\'\'\'' ( BLOCKCOMMENT | . )*? '\'\'\'' -> skip ;
+BLOCKCOMMENT2 : '"""' ( BLOCKCOMMENT2 | . )*? '"""' -> skip ;
+LINECOMMENT : '#' ~[\r\n]* -> skip;
 
-WS : [\t]+ {
-    setChannel(HIDDEN);
-    if (pendingDent) { indentCount += getText().length(); }
-};
-
-BlockComment : '\'\'\'' ( BlockComment | . )*? '\'\'\'' -> channel(HIDDEN) ;
-BlockComment2 : '"""' ( BlockComment2 | . )*? '"""' -> channel(HIDDEN) ;
-LineComment : '#' ~[\r\n]* -> channel(HIDDEN);
+INDENT: 'indent';
+DEDENT: 'dedent';
