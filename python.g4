@@ -2,7 +2,6 @@ grammar python;
 
 
 @lexer::header{
-from antlr_denter.DenterHelper import DenterHelper
 from pythonParser import pythonParser
 from antlr4.Token import CommonToken
 from antlr4.Token import Token
