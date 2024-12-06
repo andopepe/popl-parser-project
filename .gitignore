@@ -1,2 +1,4 @@
 antlrOutput/
 .antlr
+__pycache__
+.vscode

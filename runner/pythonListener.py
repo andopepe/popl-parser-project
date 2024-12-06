@@ -44,15 +44,6 @@ class pythonListener(ParseTreeListener):
         pass
 
 
-    # Enter a parse tree produced by pythonParser#ifStatement.
-    def enterIfStatement(self, ctx:pythonParser.IfStatementContext):
-        pass
-
-    # Exit a parse tree produced by pythonParser#ifStatement.
-    def exitIfStatement(self, ctx:pythonParser.IfStatementContext):
-        pass
-
-
     # Enter a parse tree produced by pythonParser#if.
     def enterIf(self, ctx:pythonParser.IfContext):
         pass
@@ -95,15 +86,6 @@ class pythonListener(ParseTreeListener):
 
     # Exit a parse tree produced by pythonParser#for.
     def exitFor(self, ctx:pythonParser.ForContext):
-        pass
-
-
-    # Enter a parse tree produced by pythonParser#value.
-    def enterValue(self, ctx:pythonParser.ValueContext):
-        pass
-
-    # Exit a parse tree produced by pythonParser#value.
-    def exitValue(self, ctx:pythonParser.ValueContext):
         pass
 
 
@@ -161,12 +143,30 @@ class pythonListener(ParseTreeListener):
         pass
 
 
-    # Enter a parse tree produced by pythonParser#function.
-    def enterFunction(self, ctx:pythonParser.FunctionContext):
+    # Enter a parse tree produced by pythonParser#conditional.
+    def enterConditional(self, ctx:pythonParser.ConditionalContext):
         pass
 
-    # Exit a parse tree produced by pythonParser#function.
-    def exitFunction(self, ctx:pythonParser.FunctionContext):
+    # Exit a parse tree produced by pythonParser#conditional.
+    def exitConditional(self, ctx:pythonParser.ConditionalContext):
+        pass
+
+
+    # Enter a parse tree produced by pythonParser#comparison.
+    def enterComparison(self, ctx:pythonParser.ComparisonContext):
+        pass
+
+    # Exit a parse tree produced by pythonParser#comparison.
+    def exitComparison(self, ctx:pythonParser.ComparisonContext):
+        pass
+
+
+    # Enter a parse tree produced by pythonParser#comparable.
+    def enterComparable(self, ctx:pythonParser.ComparableContext):
+        pass
+
+    # Exit a parse tree produced by pythonParser#comparable.
+    def exitComparable(self, ctx:pythonParser.ComparableContext):
         pass
 
 
@@ -185,15 +185,6 @@ class pythonListener(ParseTreeListener):
 
     # Exit a parse tree produced by pythonParser#number.
     def exitNumber(self, ctx:pythonParser.NumberContext):
-        pass
-
-
-    # Enter a parse tree produced by pythonParser#term.
-    def enterTerm(self, ctx:pythonParser.TermContext):
-        pass
-
-    # Exit a parse tree produced by pythonParser#term.
-    def exitTerm(self, ctx:pythonParser.TermContext):
         pass
 
 

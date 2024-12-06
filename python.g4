@@ -1,211 +1,136 @@
 grammar python;
 
+// lexer member sourced from chatGPT
+@lexer::members
+{
+indent_stack = [0]
 
-@lexer::header{
-from pythonParser import pythonParser
-from antlr4.Token import CommonToken
-from antlr4.Token import Token
-from pythonParser import pythonParser
-}
-@lexer::members {
-class DenterHelper(object):
-    def __init__(self, nl_token, indent_token, dedent_token, should_ignore_eof):
-        self.dents_buffer = []
-        self.indentations = []
-        self.nl_token = nl_token
-        self.indent_token = indent_token
-        self.dedent_token = dedent_token
-        self.reached_eof = False
-        self.should_ignore_eof = should_ignore_eof
-
-    def next_token(self):
-        self.init_if_first_run()
-        if not self.dents_buffer:
-            t = self.pull_token()
-        else:
-            t = self.dents_buffer.pop(0)
-        if self.reached_eof:
-            return t
-        if t.type == self.nl_token:
-            r = self.handle_newline_token(t)
-        elif t.type == Token.EOF:
-            r = self.apply(t)
-        else:
-            r = t
-        return r
-    
-    def pull_token(self):
-            """
-
-            :rtype: CommonToken
-            """
-            pass
-
-    def init_if_first_run(self):
-        if not self.indentations:
-            self.indentations.insert(0, 0)
-            while True:
-                first_real_token = self.pull_token()
-                if first_real_token.type != self.nl_token:
-                    break
-            if first_real_token.column > 0:
-                self.indentations.insert(0, first_real_token.column)
-                self.dents_buffer.append(self.create_token(self.indent_token, first_real_token))
-            self.dents_buffer.append(first_real_token)
-
-    def handle_newline_token(self, t: Token):
-        next_next = self.pull_token()
-        while next_next.type == self.nl_token:
-            t = next_next
-            next_next = self.pull_token()
-        if next_next.type == Token.EOF:
-            return self.apply(next_next)
-        nl_text = t.text
-        indent = len(nl_text) - 1
-        if indent > 0 and nl_text[0] == '\r':
-            indent -= 1
-        prev_indent = self.indentations[0]
-        if indent == prev_indent:
-            r = t
-        elif indent > prev_indent:
-            r = self.create_token(self.indent_token, t)
-            self.indentations.insert(0, indent)
-        else:
-            r = self.unwind_to(indent, t)
-        self.dents_buffer.append(next_next)
-        return r
-
-    def create_token(self, token_type, copy_from: CommonToken):
-        if token_type == self.nl_token:
-            token_type_str = 'newLine'
-        elif token_type == self.indent_token:
-            token_type_str = 'indent'
-        elif token_type == self.dedent_token:
-            token_type_str = 'dedent'
-        else:
-            token_type_str = None
-        r = self.get_injected_token(copy_from, token_type_str)
-        r.type = token_type
-        return r
-    
-    def get_injected_token(self, copy_from: CommonToken, token_type_str):
-        new_token = copy_from.clone()
-        new_token.text = token_type_str
-        return new_token
-
-    def unwind_to(self, target_indent, copy_from : CommonToken):
-        self.dents_buffer.append(self.create_token(self.nl_token, copy_from))
-        while True:
-            prev_indent = self.indentations.pop(0)
-            if prev_indent == target_indent:
-                break
-            if target_indent > prev_indent:
-                self.indentations.insert(0, prev_indent)
-                self.dents_buffer.append(self.create_token(self.indent_token, copy_from))
-                break
-            self.dents_buffer.append(self.create_token(self.dedent_token, copy_from))
-        self.indentations.insert(0, target_indent)
-        return self.dents_buffer.pop(0)
-
-    def apply(self, t: CommonToken):
-        if self.should_ignore_eof:
-            self.reached_eof = True
-            return t
-        else:
-            if not self.indentations:
-                r = self.create_token(self.nl_token, t)
-                self.dents_buffer.append(t)
-            else:
-                r = self.unwind_to(0, t)
-                self.dents_buffer.append(t)
-            self.reached_eof = True
-            return r
-
-class MyCoolDenter(DenterHelper):
-    def __init__(self, lexer, nl_token, indent_token, dedent_token, ignore_eof):
-        super().__init__(nl_token, indent_token, dedent_token, ignore_eof)
-        self.lexer: pythonLexer = lexer
-
-    def pull_token(self):
-        return super(pythonLexer, self.lexer).nextToken()
-
-denter = None
+pending_tokens = []
 
 def nextToken(self):
-    if not self.denter:
-        self.denter = self.MyCoolDenter(self, self.NL, pythonParser.INDENT, pythonParser.DEDENT, False)
-    return self.denter.next_token()
+    token = super().nextToken()
 
+    if token.type == self.NL:
+    
+        new_indent = 0
+        while self._input.LA(1) == ord('\t'):
+            new_indent += 1
+            self._input.consume()
+            
+        space_count = 0
+        while self._input.LA(1) == ord(' '):
+            space_count += 1
+            self._input.consume()
+
+        new_indent += space_count // 4
+
+        if space_count % 4 != 0:
+            raise ValueError("Indentation error: spaces not multiple of 4")
+
+        current_indent = self.indent_stack[-1] if self.indent_stack else 0
+        
+        if new_indent > current_indent:
+            # Create indent for each tab
+            for i in range(0, new_indent - current_indent):
+                indent_token = self._factory.create(
+                    self._tokenFactorySourcePair, 
+                    self.INDENT, 
+                    ' ' * new_indent, 
+                    self._channel, 
+                    token.start, 
+                    token.stop, 
+                    token.line, 
+                    token.column
+                )
+                self.indent_stack.append(new_indent)
+                self.pending_tokens.append(indent_token)
+        
+        elif new_indent < current_indent:
+            # Create dedent tokens for each previous indent that is greater than the new indent
+            while self.indent_stack and self.indent_stack[-1] > new_indent:
+                self.indent_stack.pop()
+
+                dedent_token = self._factory.create(
+                    self._tokenFactorySourcePair, 
+                    self.DEDENT, 
+                    '', 
+                    self._channel, 
+                    token.start, 
+                    token.stop, 
+                    token.line, 
+                    token.column
+                )
+                
+                self.pending_tokens.append(dedent_token)
+    
+    if token.type == Token.EOF:
+        while self.indent_stack and self.indent_stack[-1] > 0:
+            self.indent_stack.pop()
+            dedent_token = self._factory.create(
+                self._tokenFactorySourcePair,
+                self.DEDENT,
+                '',
+                self._channel,
+                token.start,
+                token.stop,
+                token.line,
+                token.column
+            )
+            self.pending_tokens.append(dedent_token)
+    
+    self.pending_tokens.append(token)
+
+    return self.pending_tokens.pop(0)
 }
 
-NL: ('\r'? '\n' '\t'*);
+NL: '\r'? '\n';
 
+start: (NL | line)* EOF;
 
-start: (NL | line)*;
+line: assignment NL*| expression NL* | conditional NL* | NL | if | for | while;
 
-line: (term assignment expression NL?) | ifStatement | for | while;
+assignment: TERM operator?'=' expression;
 
-assignment: operator?'=';
+expression: expression operator val | val;
 
-expression: expression operator expression | expression conditionals expression | '('expression')' | val;
+if: 'if' conditional ':' INDENT line+ DEDENT NL* (elif)* (else)?;
+elif: 'elif' conditional ':' INDENT line+ DEDENT NL*;
+else: 'else:' INDENT line+ DEDENT NL*;
 
-// ifStatement: IF expression+ ':' (NL INDENT line)+ (ELIF expression+ ':'  (NL INDENT line)+ )* (ELSE':'  (NL INDENT line)+ )?;
+while: 'while' conditional ':' INDENT line+ DEDENT NL*;
 
-// ifStatement: IF expression+ ':' NL INDENT line+ DEDENT;
+for: 'for ' TERM ' in '( TERM | 'range' '(' number ',' number')') ':' INDENT line+ DEDENT NL*;
 
-ifStatement: if elif* else?;
-if: IF expression+ ':' INDENT line+ DEDENT;
-elif: ELIF expression+ ':'  INDENT line+ DEDENT;
-else: ELSE ':'  INDENT line+ DEDENT;
+val: number | TERM | STRING | bool | array | ('('val')');
 
-while: WHILE expression+ ':' INDENT line+ DEDENT;
-
-for: FOR expression 'in' expression ':' INDENT line+ DEDENT;
-
-value: ('('val')') | val;
-val: NOT? (term | number | STRING | bool | array | function);
-
-array: '[' ((value',')*? value)']';
+array: '[' ((val',')*? val)']';
 operator: operatorLP | operatorHP;
 operatorHP: '/' | '%' | '*';
 operatorLP: '+' | '-';
-conditionals: '<' | '<=' | '==' | '>=' | '>' | '!=' | AND | OR | NOT;
-function: term'('value(','value)+')';
+conditionals: '<' | '<=' | '==' | '>=' | '>' | '!=';
+conditional: comparison (AND | OR) comparison | comparison;
+comparison: comparable conditionals comparable | NOT? '(' comparison ')' | comparable; 
+comparable: NOT? (val | bool);
 
-AND: 'and';
-OR: 'or';
-NOT: 'not';
-
-IF: 'if'; 
-
-ELSE: 'else';
-
-ELIF: 'elif';
-
-FOR: 'for';
-
-WHILE: 'while';
-
+AND: ' and ';
+OR: ' or ';
+NOT: 'not ';
 
 bool: TRUE | FALSE;
 TRUE: 'True';
 FALSE: 'False';
 
-number : FLOAT | DIGIT+;
+number : FLOAT | DIGIT;
 STRING: ('"' ~'"'*? '"') | ('\'' ~'\''*? '\'');
 
-term: TERM;
-TERM: TERM_START TERM_FOLLOW*;
-fragment TERM_START: [a-zA-Z]; 
-fragment TERM_FOLLOW: [a-zA-Z0-9_\-]+;
+TERM: [a-zA-Z_] [a-zA-Z0-9_]*;
 
 FLOAT: '-'?[0-9]+ '.' [0-9]+;
-DIGIT: '-'?[0-9];
-WS: [ ] ->skip; 
-
+DIGIT: '-'?[0-9]+;
+WS: [ ] ->skip;
 BLOCKCOMMENT : '\'\'\'' ( BLOCKCOMMENT | . )*? '\'\'\'' -> skip ;
 BLOCKCOMMENT2 : '"""' ( BLOCKCOMMENT2 | . )*? '"""' -> skip ;
 LINECOMMENT : '#' ~[\r\n]* -> skip;
 
-INDENT: 'indent';
-DEDENT: 'dedent';
+INDENT: '\t';
+DEDENT: '<DEDENT>';

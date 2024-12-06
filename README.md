@@ -1,8 +1,8 @@
 # Principles of Programming Languages Parser Project
 
 # Project Description
-* This project was to write a grammer for a basic version of Python. The grammer was created with ANTLR
-* The grammer supported the following:
+* This project was to write a grammar for a basic version of Python. The grammar was created with ANTLR
+* The grammar supported the following:
    - Arithmetic operators (+, -, *, /, %,)
    - Assignment operators (=, +=, -=, *=, /=)
    - if/elif/else blocks
@@ -19,11 +19,14 @@
 * Requirements
    - Programming Language: Python 3.12
    - ANTLR version : 4
-   - Both Linux and Windows envirnments have been tested for this project
+   - Both Linux and Windows environments have been tested for this project
+   - graphviz
 
 * How to use/run
-      1. Pull the latest version the of the project for this Github repositiory
-      2. Run the command antlr4-parse python.g4 start project_deliverable_3.py
+      1. Pull the latest version the of the project for this Github repository
+      2. Run the command ```antlr4 -Dlanguage=Python3 python.g4 -o runner/```
+      3. CD into runner folder
+      4. run ```python3 runner.py {inputFile} ```
          - gui can be used to see graphical representations of each code segment
 
 * Video Link
