@@ -27,7 +27,6 @@
       2. Run the command ```antlr4 -Dlanguage=Python3 python.g4 -o runner/```
       3. CD into runner folder
       4. run ```python3 runner.py {inputFile} ```
-         - gui can be used to see graphical representations of each code segment
 
 * Video Link
    - The video link is available on the canvas site.
